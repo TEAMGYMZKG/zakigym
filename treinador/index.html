@@ -2500,7 +2500,7 @@
     const top = document.createElement("div"); top.className = "g-top";
     const TABS = [["semana","📅 Esta semana"],["sinto","🙂 Como me sinto"],["cargas","🏋️ As minhas cargas"],["cal","🗓️ Calendário"],["pares","🤝 Par"],["barra","🔩 Barra"],["ajuda","❓ Como funciona"]];
     top.innerHTML = `<label class="g-me">Sou a <select id="g-me"><option value="">— escolhe o teu nome —</option>${D.names.map(n => `<option ${n === me ? "selected" : ""}>${n}</option>`).join("")}</select></label>
-      <nav class="g-tabs">${TABS.map(([k, n]) => `<button type="button" data-tab="${k}">${n}</button>`).join("")}</nav>`;
+      <nav class="g-tabs c-tabs">${TABS.map(([k, n]) => { const i = n.indexOf(" "); return `<button type="button" data-tab="${k}"><span class="ti">${n.slice(0, i)}</span><span class="tl">${n.slice(i + 1)}</span></button>`; }).join("")}</nav>`;
     root.prepend(top);
     const sem = document.createElement("section"); sem.className = "g-semana"; sem.dataset.tabsec = "semana";
     top.after(sem);
@@ -3006,7 +3006,7 @@
       .gx-ban{background:#FFF0DC;border:1px solid #F2C38E;border-radius:12px;padding:10px 12px;margin:10px 0;font-weight:600;cursor:pointer}
       .gx-spark{width:120px;height:32px}`;
     document.head.appendChild(st);
-    const addTab = (k, label) => { if (nav.querySelector(`[data-tab="${k}"]`)) return; const b = document.createElement("button"); b.type = "button"; b.dataset.tab = k; b.textContent = label; const after = nav.querySelector('[data-tab="semana"]'); after ? after.after(b) : nav.appendChild(b); };
+    const addTab = (k, label) => { if (nav.querySelector(`[data-tab="${k}"]`)) return; const b = document.createElement("button"); b.type = "button"; b.dataset.tab = k; { const i = label.indexOf(" "); b.innerHTML = `<span class="ti">${label.slice(0, i)}</span><span class="tl">${label.slice(i + 1)}</span>`; } const after = nav.querySelector('[data-tab="semana"]'); after ? after.after(b) : nav.appendChild(b); };
     addTab("rec", "⭐ Os meus recordes"); addTab("treino", "▶ Modo treino");
     const mk = (cls, tab) => { const s = document.createElement("section"); s.className = "gx-sec " + cls; s.dataset.tabsec = tab; s.style.display = "none"; root.appendChild(s); return s; };
     const sRec = mk("gx-rec-sec", "rec"), sTr = mk("gx-tr-sec", "treino");
@@ -3176,7 +3176,7 @@
     importNew(j.answers || [], j.total || 0);
     if (upload) push(true);
     // nova versão do site → voltar a publicar a página das ginastas
-    const BUILD = "2026-11-24b", st0 = window.__zkGetState();
+    const BUILD = "2026-11-24c", st0 = window.__zkGetState();
     if (st0.pubBuild !== BUILD) { st0.pubBuild = BUILD; delete st0.lastExportSig; window.__zkSave(); }
     if (window.__zkStale) window.__zkStale();
     setInterval(refreshAnswers, 120000);
