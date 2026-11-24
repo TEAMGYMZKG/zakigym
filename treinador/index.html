@@ -440,6 +440,15 @@
     .coach-view table:not([class]) td,.coach-view table:not([class]) th{min-width:0}
   }
   .sim small,.g-sim small{white-space:nowrap}
+  .sc-pick{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0 10px}
+  .sc-pick b{margin-right:4px;font-size:14px}
+  .sc-btn{border:1px solid #f0c49a;background:#fff;border-radius:999px;padding:6px 12px;font:600 13px/1.2 inherit;color:#8a4a12;cursor:pointer}
+  .sc-btn.on{background:linear-gradient(135deg,#f28a2e,#e8741a);color:#fff;border-color:#e8741a;box-shadow:0 2px 6px rgba(232,116,26,.35)}
+  .sc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(260px,100%),1fr));gap:10px;margin:4px 0 8px}
+  .sc-card{border:1px solid #f3dcc3;border-radius:12px;padding:10px 12px;background:#fffaf4;cursor:pointer;display:flex;flex-wrap:wrap;gap:6px;transition:box-shadow .15s}
+  .sc-card:hover{box-shadow:0 2px 10px rgba(0,0,0,.08)}
+  .sc-card.on{border:2px solid #e8741a;background:#fff3e6}
+  .sc-h{width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px}
   .xs-hint{font-size:11.5px;color:#b5651d;font-weight:600;margin:6px 0 4px;display:flex;align-items:center;gap:6px}
   .xs-hint::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,#f0c49a,transparent)}
   .coach-view td,.coach-view th,.gym-only td,.gym-only th{overflow-wrap:normal;word-break:normal;hyphens:manual}
@@ -1565,20 +1574,26 @@
   pst.absent = pst.absent || [];
   // diferença média entre os pesos reais de treino (terça: PC e PP; quinta: PC, DL e SP; semanas 1–5)
   const SLOTS = [["tue","pc"],["tue","pp"],["thu","pc"],["thu","dl"],["thu","sp"]];
+  // âmbito do cálculo: total ou um só exercício
+  const SCOPES = [["all","Total",SLOTS],["pc","Power Clean",[["tue","pc"],["thu","pc"]]],["pp","Push Press",[["tue","pp"]]],["dl","Deadlift",[["thu","dl"]]],["sp","Shoulder Press",[["thu","sp"]]]];
+  const scopeOf = k => SCOPES.find(x => x[0] === k) || SCOPES[0];
+  if (!scopeOf(pst.scope) || !pst.scope) pst.scope = "all";
+  let curScope = pst.scope;
   let costMemo = null;
-  function pairCost(a, b){
-    const key = a < b ? a + "|" + b : b + "|" + a;
+  function pairCost(a, b, sc){
+    sc = sc || curScope;
+    const key = sc + ":" + (a < b ? a + "|" + b : b + "|" + a);
     if (costMemo && costMemo.has(key)) return costMemo.get(key);
     let t = 0, n = 0;
-    for (let w = 1; w <= 5; w++) SLOTS.forEach(([d, ex]) => { const x = dayLoads(a, ex, d, w), y = dayLoads(b, ex, d, w); if (x && y && x.kg + y.kg > 0) { t += Math.abs(x.kg - y.kg) / ((x.kg + y.kg) / 2); n++; } });
+    for (let w = 1; w <= 5; w++) scopeOf(sc)[2].forEach(([d, ex]) => { const x = dayLoads(a, ex, d, w), y = dayLoads(b, ex, d, w); if (x && y && x.kg + y.kg > 0) { t += Math.abs(x.kg - y.kg) / ((x.kg + y.kg) / 2); n++; } });
     const c = n ? t / n : 1;
     if (costMemo) costMemo.set(key, c);
     return c;
   }
   const hasLoads = g => SLOTS.some(([d, ex]) => dayLoads(g, ex, d, 1));
-  function groupCost(gr){
+  function groupCost(gr, sc){
     let t = 0, n = 0;
-    for (let i = 0; i < gr.length; i++) for (let j = i + 1; j < gr.length; j++) { t += pairCost(gr[i], gr[j]); n++; }
+    for (let i = 0; i < gr.length; i++) for (let j = i + 1; j < gr.length; j++) { t += pairCost(gr[i], gr[j], sc); n++; }
     return t / n;
   }
   function matchings(list){
@@ -1597,11 +1612,12 @@
     }
     return out;
   }
-  function pairHypotheses(all){
+  function pairHypotheses(all, sc){
+    sc = sc || (all ? "all" : curScope);
     costMemo = new Map();
     const pres = all ? NAMES.slice() : NAMES.filter(g => !pst.absent.includes(g));
     const cand = pres.filter(hasLoads);
-    const out = cand.length >= 2 ? matchings(cand).map(m => ({ groups: m, cost: m.reduce((t, gr) => t + groupCost(gr), 0) / m.length })) : [];
+    const out = cand.length >= 2 ? matchings(cand).map(m => ({ groups: m, cost: m.reduce((t, gr) => t + groupCost(gr, sc), 0) / m.length })) : [];
     out.sort((a, b) => a.cost - b.cost);
     costMemo = null;
     return { cand, out: out.slice(0, 3), left: pres.filter(g => !cand.includes(g)) };
@@ -1631,7 +1647,15 @@
   function renderPairs(){
     const box = document.getElementById("pairs-coach"), gbox = document.getElementById("g-pares");
     trackRec();
+    curScope = pst.scope;
     const H = pairHypotheses();
+    const scName = scopeOf(curScope)[1];
+    // melhor hipótese em cada âmbito (com as presentes)
+    const perScope = SCOPES.map(([k, nm]) => { const h = pairHypotheses(false, k); return [k, nm, h.out[0]]; });
+    const gcS = (gr, k) => { costMemo = new Map(); const c = groupCost(gr, k); costMemo = null; return c; };
+    const scopeBox = `<div class="sc-pick"><b>Calcular os pares por:</b> ${SCOPES.map(([k, nm]) => `<button type="button" class="sc-btn${k === curScope ? " on" : ""}" data-scope="${k}">${k === "all" ? "⚖️ " : ""}${nm}</button>`).join("")}</div>` +
+      `<div class="sc-grid">${perScope.map(([k, nm, b]) => `<div class="sc-card${k === curScope ? " on" : ""}" data-scope="${k}"><div class="sc-h"><b>${k === "all" ? "Total (todos os exercícios)" : nm}</b>${b ? `<span class="aff ${pctCls(b.cost)}">${pctTxt(b.cost)}</span>` : ""}</div>${b ? b.groups.map(gr => `<span class="pairchip ${pctCls(gcS(gr, k))}">${gr.join(" + ")} · ${pctTxt(gcS(gr, k))}</span>`).join("") : "<span class='small'>Sem cargas</span>"}</div>`).join("")}</div>` +
+      `<p class="small">Cada cartão mostra a melhor forma de fazer os pares para esse exercício (diferença média de peso, semanas 1–5). "Total" junta todos: é o mais prático quando o par se mantém o treino inteiro. Toca num cartão para ver as hipóteses, as parceiras e a simulação desse exercício.</p>`;
     const presence = (pst.prevRec && pst.recAt && (new Date(isoToday()) - new Date(pst.recAt)) / 86400000 <= 14 ? `<p class="note" style="border-left:4px solid var(--orange)">🔄 <b>Os pares recomendados mudaram</b> com os RM atualizados (${+pst.recAt.slice(8)}/${+pst.recAt.slice(5, 7)}).<br>Agora: <b>${pst.lastRec}</b><br><span class="small">Antes: ${pst.prevRec}</span></p>` : "") +
       `<p class="small">Os pares recalculam-se sozinhos sempre que mudas um RM, a partir dos pesos reais de treino (terça: Power Clean e Push Press; quinta: Power Clean, Deadlift e Shoulder Press). A app das ginastas mostra sempre a opção recomendada com a equipa completa.</p>` +
       `<div class="presence"><b>Quem está no treino?</b> ${NAMES.map(g => `<label class="pchk${pst.absent.includes(g) ? "" : " on"}"><input type="checkbox" data-pres="${g}" ${pst.absent.includes(g) ? "" : "checked"}> ${g}</label>`).join("")}</div>`;
@@ -1640,14 +1664,15 @@
     if (pst.hyp >= H.out.length) pst.hyp = 0;
     const names = gr => gr.join(" + ");
     // hipóteses
-    const hyps = H.out.map((h, i) => `<label class="hyp${i === pst.hyp ? " on" : ""}"><input type="radio" name="hyp" value="${i}" ${i === pst.hyp ? "checked" : ""}> <b>Hipótese ${i + 1}</b> <span class="aff ${pctCls(h.cost)}">${pctTxt(h.cost)} de diferença média</span><span class="hg">${h.groups.map(gr => `<span class="pairchip ${pctCls(groupCost(gr))}">${names(gr)} · ${pctTxt(groupCost(gr))}</span>`).join("")}</span></label>`).join("");
+    const hyps = H.out.map((h, i) => `<label class="hyp${i === pst.hyp ? " on" : ""}"><input type="radio" name="hyp" value="${i}" ${i === pst.hyp ? "checked" : ""}> <b>Hipótese ${i + 1}</b> <span class="aff ${pctCls(h.cost)}">${pctTxt(h.cost)} de diferença média${curScope === "all" ? "" : " · " + scName}</span><span class="hg">${h.groups.map(gr => `<span class="pairchip ${pctCls(groupCost(gr))}">${names(gr)} · ${pctTxt(groupCost(gr))}</span>`).join("")}</span></label>`).join("");
     // matriz
     const C = H.cand;
     const matrix = `<table class="aff-matrix"><thead><tr><th></th>${C.map(c => `<th>${c.split(" ")[0]}</th>`).join("")}</tr></thead><tbody>` +
       C.map(a => `<tr><th>${a}</th>${C.map(b => a === b ? `<td class="aff-self">—</td>` : `<td class="${pctCls(pairCost(a, b))}">${pctTxt(pairCost(a, b))}</td>`).join("")}</tr>`).join("") + `</tbody></table>`;
     // simulação
     const hsel = H.out[pst.hyp];
-    const exs = pst.day === "tue" ? [["pc","Power Clean"],["pp","Push Press"]] : PAIR_EX;
+    let exs = pst.day === "tue" ? [["pc","Power Clean"],["pp","Push Press"]] : PAIR_EX;
+    if (curScope !== "all") { const sd = scopeOf(curScope)[2].map(x => x[0]); if (!sd.includes(pst.day)) pst.day = sd[0]; exs = (pst.day === "tue" ? [["pc","Power Clean"],["pp","Push Press"]] : PAIR_EX).filter(e => e[0] === curScope); }
     const rows = hsel.groups.map(gr => {
       const cells = exs.map(([ex]) => {
         const ls = gr.map(g => dayLoads(g, ex, pst.day, pst.week));
@@ -1666,11 +1691,17 @@
     const left = H.left.length ? `<p class="small">Sem RM completo (fica fora do cálculo): ${H.left.join(", ")}. Até ter testes, junta-se a um par como 3.ª elemento e trabalha técnica com a barra de 10 kg.</p>` : "";
     const best = H.cand.map(g => { const r = H.cand.filter(x => x !== g).map(x => [x, pairCost(g, x)]).sort((a, b) => a[1] - b[1]).slice(0, 3);
       return `<div class="g-bestrow"><b>${g}</b> ${r.map(([x, c], i) => `<span class="pairchip ${pctCls(c)}">${i + 1}.º ${x} · ${pctTxt(c)}</span>`).join(" ")}</div>`; }).join("");
-    if (box) box.innerHTML = presence + `<h3>Hipóteses de pares</h3><div class="hyps">${hyps}</div>
-      <h3>Melhores parceiras de cada uma</h3><p class="small">Para cada ginasta presente, as 3 colegas com pesos de treino mais parecidos (diferença média nos pesos de terça e quinta), da melhor para a pior. Útil quando falta alguém ou queres mudar um par.</p><div class="g-best">${best}</div>
-      <h3>Diferença entre cada duas ginastas</h3><p class="small">Diferença média entre os pesos de treino (terça: Power Clean e Push Press; quinta: Power Clean, Deadlift e Shoulder Press). Verde até 10%, amarelo de 11% a 20%, vermelho acima de 20%.</p>${matrix}
+    const scTxt = curScope === "all" ? "terça: Power Clean e Push Press; quinta: Power Clean, Deadlift e Shoulder Press" : "só " + scName;
+    if (box) box.innerHTML = presence + `<h3>Melhores pares por exercício</h3>${scopeBox}<h3>Hipóteses de pares · ${curScope === "all" ? "total" : scName}</h3><div class="hyps">${hyps}</div>
+      <h3>Melhores parceiras de cada uma · ${curScope === "all" ? "total" : scName}</h3><p class="small">Para cada ginasta presente, as 3 colegas com pesos mais parecidos (${scTxt}), da melhor para a pior. Útil quando falta alguém ou queres mudar um par.</p><div class="g-best">${best}</div>
+      <h3>Diferença entre cada duas ginastas · ${curScope === "all" ? "total" : scName}</h3><p class="small">Diferença média entre os pesos de treino (${scTxt}). Verde até 10%, amarelo de 11% a 20%, vermelho acima de 20%.</p>${matrix}
       <h3>Simulação do treino</h3>${sim}${left}`;
   }
+  document.addEventListener("click", e => {
+    const b = e.target.closest && e.target.closest("[data-scope]");
+    if (!b || !b.closest("#pairs-coach")) return;
+    pst.scope = b.dataset.scope; pst.hyp = 0; save(); renderPairs();
+  });
   document.addEventListener("change", e => {
     const t = e.target;
     if (t.name === "hyp") { pst.hyp = +t.value; save(); renderPairs(); }
@@ -3197,7 +3228,7 @@
     importNew(j.answers || [], j.total || 0);
     if (upload) push(true);
     // nova versão do site → voltar a publicar a página das ginastas
-    const BUILD = "2026-11-24d", st0 = window.__zkGetState();
+    const BUILD = "2026-11-24e", st0 = window.__zkGetState();
     if (st0.pubBuild !== BUILD) { st0.pubBuild = BUILD; delete st0.lastExportSig; window.__zkSave(); }
     if (window.__zkStale) window.__zkStale();
     setInterval(refreshAnswers, 120000);
