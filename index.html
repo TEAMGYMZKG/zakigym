@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Treino de Força Explosiva – Equipa Júnior de TeamGym ZAKIGYM</title>
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="ZKG - JUN">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#ED7D31">
+<script src="config.js"></script>
+<style>
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#F6F1EC;color:#2B2B2B;display:flex;min-height:100vh;align-items:center;justify-content:center}
+  .ld{text-align:center}.ld img{width:110px}.ld p{color:#8a7a6d;font-size:14px}
+  .ld{max-width:320px;width:100%;padding:20px}
+  #lg{display:flex;flex-direction:column;gap:10px;margin-top:6px}#lg[hidden]{display:none}
+  #lg .t{font-weight:700;color:#2B2B2B;margin:0}
+  #lg input{font:inherit;font-size:16px;padding:12px;border:1px solid #e6d6c8;border-radius:10px;text-align:center}
+  #lg button{font:inherit;font-size:16px;font-weight:700;padding:12px;border:0;border-radius:10px;background:#ED7D31;color:#fff}
+  .err{color:#B26A00;font-weight:600;min-height:1em}
+  .co{margin-top:28px}.co a{color:#8a7a6d;font-size:12px;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="ld" id="ld"><img src="icon-192.png" alt="ZAKIGYM"><p id="ldmsg">A carregar o teu treino…</p>
+  <form id="lg" hidden><p class="t">Equipa Júnior de TeamGym</p><input id="gpw" type="password" autocomplete="current-password" placeholder="Palavra-passe da equipa" required><button type="submit">Entrar</button><p class="err" id="lgerr"></p></form>
+  <p class="co"><a href="treinador/">🔒 Treinador</a></p></div>
+<script>
+(function(){
+  try { sessionStorage.setItem("zk_site", "1"); } catch (_) {}
+  const API = window.ZK_API && /^https:\/\/script\.google\.com\//.test(window.ZK_API) ? window.ZK_API : "";
+  const get = k => { try { return localStorage.getItem(k); } catch (_) { return null; } };
+  const set = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (_) {} };
+  const INST = "<div id=\"g-install\" class=\"g-install\"><h2>📲 Instalar a app no telemóvel</h2>\n        <div class=\"g-inst\"><h3>iPhone (Safari)</h3><ol><li>Abre o link da app no <b>Safari</b>.</li><li>Escreve a <b>palavra-passe da equipa</b> e carrega em Entrar.</li><li>Carrega em <b>Partilhar</b> (quadrado com seta) → <b>Adicionar ao ecrã principal</b> → Adicionar.</li><li>Abre sempre pelo ícone <b>ZAKIGYM</b>.</li></ol></div>\n        <div class=\"g-inst\"><h3>Android (Chrome)</h3><ol><li>Abre o link da app no <b>Chrome</b>.</li><li>Escreve a <b>palavra-passe da equipa</b> e carrega em Entrar.</li><li>Carrega nos <b>⋮</b> → <b>Adicionar ao ecrã principal</b> (ou Instalar app).</li><li>Abre sempre pelo ícone <b>ZAKIGYM</b>.</li></ol></div>\n        <p class=\"small\">Depois de cada treino (seg, ter, qua, sex): <b>🙂 Como me sinto</b> → <b>📨 Enviar ao treinador</b>. Se tinhas um ícone antigo, apaga-o.</p>\n        <style>.g-install{margin-top:18px}.g-inst{background:#FFF6EE;border-radius:12px;padding:10px 14px;margin:8px 0}.g-inst h3{margin:2px 0 6px;font-size:15px}.g-inst ol{margin:0;padding-left:20px;font-size:14px;line-height:1.5}</style></div>\n      ";
+  const show = html => {
+    if (html.indexOf('id="g-install"') < 0) { const a = html.indexOf('<section class="g-how">'); const b = a >= 0 ? html.indexOf('</section>', a) : -1; if (b > 0) html = html.slice(0, b) + INST + html.slice(b); }
+    html = html.replace('name="apple-mobile-web-app-title" content="ZAKIGYM"', 'name="apple-mobile-web-app-title" content="ZKG - JUN"');
+    document.open(); document.write(html); document.close();
+  };
+  const $ = id => document.getElementById(id);
+  async function load(gpw){
+    $("ldmsg").textContent = "A carregar o teu treino…";
+    let j = null;
+    try {
+      const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 15000);
+      const r = await fetch(API, { method: "POST", body: JSON.stringify({ a: "pub", gpw: gpw || "" }), signal: ctl.signal });
+      clearTimeout(to); j = await r.json();
+    } catch (_) {}
+    if (j && j.ok && j.html) { set("zk_pub", j.html); if (gpw) set("zk_gpw", gpw); show(j.html); return; }
+    if (j && j.err === "gin") { set("zk_pub", null); set("zk_gpw", null); askLogin(gpw ? "Palavra-passe errada." : ""); return; }
+    const cached = get("zk_pub");
+    if (cached) { show(cached); return; }                      // sem rede: última versão guardada
+    if (!j) { $("ldmsg").textContent = "Sem ligação à internet. Tenta outra vez daqui a pouco."; return; }
+    location.replace("ginastas.html");                         // servidor ainda sem versão publicada
+  }
+  function askLogin(err){
+    $("ldmsg").textContent = "Entra com a palavra-passe da equipa";
+    $("lg").hidden = false; $("lgerr").textContent = err || ""; $("gpw").focus();
+  }
+  // palavra-passe de treinador no ecrã da equipa → abre a área do treinador
+  async function isCoach(p){
+    if (!p) return false;
+    try { const r = await fetch(API, { method: "POST", body: JSON.stringify({ a: "load", pw: p }) }); const j = await r.json(); return !!(j && j.ok); } catch (_) { return false; }
+  }
+  function goCoach(p){ set("zk_pw", p); set("zk_gpw", null); location.replace("treinador/"); }
+  $("lg").addEventListener("submit", async e => {
+    e.preventDefault(); const p = $("gpw").value; $("lg").hidden = true; $("ldmsg").textContent = "A verificar…";
+    if (await isCoach(p)) { goCoach(p); return; }
+    load(p);
+  });
+  if (!API) { location.replace("ginastas.html"); return; }
+  // treinador com sessão guardada neste aparelho → abre logo a área do treinador
+  if (get("zk_pw")) { location.replace("treinador/"); return; }
+  (async () => {
+    const g = get("zk_gpw");
+    if (g && !get("zk_gchk")) { set("zk_gchk", "1"); if (await isCoach(g)) { goCoach(g); return; } }
+    load(g);
+  })();
+})();
+</script>
+</body>
+</html>
