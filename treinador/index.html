@@ -421,7 +421,28 @@
   .c-tabs button .tl{font-size:13px;font-weight:700;color:#3A2A1E;text-align:center}
   .c-tabs button.on{background:linear-gradient(135deg,#F7A541,var(--orange));border-color:var(--orange);box-shadow:0 4px 12px rgba(240,125,40,.35)}
   .c-tabs button.on .tl{color:#fff}
-  @media (max-width:640px){.coach-view table{display:block;overflow-x:auto;max-width:100%}.coach-view .card{overflow-x:auto}}
+  @media (max-width:640px){
+    .coach-view table{display:block;overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}
+    .coach-view .card{overflow-x:auto}
+    .coach-view table td,.coach-view table th{min-width:3.6em}
+    .coach-view table.lefty td:first-child,.coach-view table.lefty th:first-child{max-width:8.5em}
+    .coach-view table.lefty th:first-child,.coach-view table.lefty td:first-child{min-width:5.5em}
+    .coach-view table.lp-mon td,.coach-view table.lp-avg td{min-width:4.2em}
+    .coach-view table.hj-t th:first-child{min-width:9em;max-width:12em}
+    .coach-view table.sim td{min-width:5em}
+    .coach-view table.sim td:first-child,.coach-view table.sim th:first-child{min-width:8em}
+    .coach-view table.prog td{min-width:5.2em}
+    .coach-view table.scheme td{min-width:6em}
+    .coach-view table th{white-space:normal}
+    .coach-view table.lefty th:first-child{max-width:9em}
+    .coach-view table th small{white-space:normal}
+    .coach-view table.lp-mon:not(.hj-t) td:last-child{min-width:14em}
+    .coach-view table:not([class]) td,.coach-view table:not([class]) th{min-width:0}
+  }
+  .sim small,.g-sim small{white-space:nowrap}
+  .xs-hint{font-size:11.5px;color:#b5651d;font-weight:600;margin:6px 0 4px;display:flex;align-items:center;gap:6px}
+  .xs-hint::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,#f0c49a,transparent)}
+  .coach-view td,.coach-view th,.gym-only td,.gym-only th{overflow-wrap:normal;word-break:normal;hyphens:manual}
   @media (max-width:640px){.c-tabs{grid-template-columns:repeat(5,1fr);gap:5px}.c-tabs button{padding:7px 2px;border-radius:10px}.c-tabs button .ti{font-size:18px}.c-tabs button .tl{font-size:10.5px}.c-top{position:static!important}}
   .c-top{position:sticky;top:0;z-index:4;background:#fff;border-bottom:1px solid var(--line);padding:10px 0;margin:0 0 6px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
   .c-actions{display:flex;gap:6px;flex-wrap:wrap}
@@ -482,7 +503,7 @@
       <div class="club">ZAKIGYM · União Gimnástica Albicastrense</div>
       <h1>Treino de Força Explosiva</h1>
       <span class="team">Equipa Júnior de TeamGym</span> <span class="team coach-only" style="background:#2B2B2B">Documento do treinador</span>
-      <div class="date">Atualizado a 9 de novembro de 2026</div>
+      <div class="date">Atualizado a 24 de novembro de 2026</div>
     </div>
   </header>
 
@@ -3176,7 +3197,7 @@
     importNew(j.answers || [], j.total || 0);
     if (upload) push(true);
     // nova versão do site → voltar a publicar a página das ginastas
-    const BUILD = "2026-11-24c", st0 = window.__zkGetState();
+    const BUILD = "2026-11-24d", st0 = window.__zkGetState();
     if (st0.pubBuild !== BUILD) { st0.pubBuild = BUILD; delete st0.lastExportSig; window.__zkSave(); }
     if (window.__zkStale) window.__zkStale();
     setInterval(refreshAnswers, 120000);
@@ -3275,6 +3296,11 @@
     } catch (_) {}
   }
 })();
+</script>
+<script>
+(function(){function mark(){document.querySelectorAll('table').forEach(function(t){var p=t.previousElementSibling,has=p&&p.classList&&p.classList.contains('xs-hint');var need=t.offsetParent&&t.scrollWidth>t.clientWidth+8;if(need&&!has){var d=document.createElement('div');d.className='xs-hint';d.textContent='↔ desliza a tabela para o lado';t.parentNode.insertBefore(d,t);}else if(!need&&has){p.remove();}});}
+var tm;function later(){clearTimeout(tm);tm=setTimeout(mark,350);}
+document.addEventListener('click',later,true);window.addEventListener('resize',later);window.addEventListener('load',function(){setTimeout(mark,1500)});})();
 </script>
 </body>
 </html>
