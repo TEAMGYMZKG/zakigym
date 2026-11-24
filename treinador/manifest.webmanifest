@@ -1,0 +1,23 @@
+{
+ "name": "ZAKIGYM Treinador",
+ "short_name": "ZK Treinador",
+ "start_url": "./index.html",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#2B2B2B",
+ "theme_color": "#2B2B2B",
+ "lang": "pt-PT",
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any maskable"
+  }
+ ]
+}
